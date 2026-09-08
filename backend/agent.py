@@ -137,7 +137,7 @@ SYSTEM_PROMPT = (
     "exclamation mark and cheerful Hinglish words like 'हाँजी!', "
     "'बिल्कुल!', 'ज़रूर!', 'वाह!',  'शानदार!'.\n"
     "   Examples:\n"
-    "   'हाँजी! आपका order confirm हो गया है!Thankyou
+    "   'हाँजी! आपका order confirm हो गया है! Thankyou '\n"
     "   'वाह! iPhone 17 पर आज बढ़िया discount चल रहा है!'\n"
     "   EXCEPTION: if the customer is angry or reporting a problem, be "
     "calm and empathetic instead — no exclamation marks.\n"
@@ -649,7 +649,7 @@ async def entrypoint(ctx: agents.JobContext):
         sample_rate=22050,
         use_websocket=True,
         segment="bySentence",
-        speed_alpha=0.85,            # 0.7–0.9 = faster; raise toward 1.0 if too fast
+        speed_alpha=0.95,            # 0.7–0.9 = faster; raise toward 1.0 if too fast
     )
 
 
