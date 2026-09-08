@@ -1,331 +1,684 @@
-Friday — Multilingual Voice AI Agent
+Friday Voice
 
-A real-time voice-native customer support agent built for natural Hindi-English (Hinglish) conversations.
+Real-time Multilingual Voice AI Customer Support Agent
 
-Friday is a low-latency conversational AI agent designed for Indian users. It understands natural code-switching between Hindi and English and responds with a consistent Indian voice.
+Natural Hindi-English conversations • Real-time audio • Interruptible
+voice interaction
 
-🎯 Problem
 
-Traditional voice assistants often struggle with real-world Indian conversations.
+1. Overview
 
-Users naturally switch between languages:
+Friday Voice is a real-time, voice-native customer support agent
+designed for natural Indian conversations where users freely switch
+between Hindi and English.
+
+Instead of forcing a user to select a language before speaking, Friday
+is designed around the way people actually communicate:
 
 "Mera order abhi tak deliver nahi hua, can you check?"
 
-A voice agent must understand the language switch without forcing the user to manually select a language.
+The agent receives speech, transcribes it, generates a concise response,
+converts that response into speech, and streams the audio back to the
+user.
 
-Friday is designed specifically for this interaction pattern.
+2. Problem
 
-💡 Solution
-
-Friday provides a real-time conversational pipeline:
-
-User Speech
-     ↓
-LiveKit
-     ↓
-Deepgram Nova-3
-     ↓
-Multilingual STT
-     ↓
-LLM
-     ↓
-Response Generation
-     ↓
-Rime TTS
-     ↓
-Indian Voice Response
-     ↓
-User
-
-The system is optimized for:
+Traditional voice assistants often struggle with:
 
 Hindi-English code-switching
 
-Low-latency conversations
+Short conversational turns
 
-Voice interruption
+Users interrupting the assistant
 
-Natural turn-taking
+Streaming speech
 
-Consistent voice identity
+Technical/product terminology
 
-Short conversational responses
+Natural conversational pacing
 
-✨ Key Features
+Maintaining a consistent voice
 
-🗣️ Natural Hinglish
+For customer support, these problems become especially noticeable
+because users expect the interaction to feel like a conversation rather
+than a sequence of API calls.
 
-Friday can handle conversations where Hindi and English are mixed naturally.
+3. Solution
 
-Example:
+Friday combines a real-time communication layer with specialized speech,
+language, and voice services.
+
+High-Level Architecture
+
+flowchart LR
+    A["User<br/>Microphone"] --> B["LiveKit<br/>Realtime Audio"]
+    B --> C["Deepgram Nova-3<br/>Speech-to-Text"]
+    C --> D["Groq<br/>GPT-OSS 20B"]
+    D --> E["Rime Coda<br/>Text-to-Speech"]
+    E --> B
+    B --> F["User<br/>Speaker"]
+
+    style A fill:#111827,color:#fff
+    style B fill:#4f46e5,color:#fff
+    style C fill:#059669,color:#fff
+    style D fill:#f59e0b,color:#111
+    style E fill:#dc2626,color:#fff
+    style F fill:#111827,color:#fff
+
+Conversation Flow
+
+User speaks
+    ↓
+Browser captures microphone audio
+    ↓
+LiveKit transports realtime audio
+    ↓
+Deepgram Nova-3
+    ↓
+Speech → Text
+    ↓
+Groq GPT-OSS 20B
+    ↓
+Text response
+    ↓
+Rime Coda
+    ↓
+Text → Speech
+    ↓
+LiveKit streams audio to browser
+    ↓
+User hears the response
+
+4. Core Features
+
+4.1 Natural Hinglish
+
+Friday is designed for mixed Hindi-English speech.
+
+Example
 
 User:
-
 "Mera refund abhi tak nahi aaya, can you check?"
 
 Friday:
-
 "Sure, main aapka refund status check karta hoon."
 
-⚡ Real-Time Voice
+The agent's prompt is designed to keep responses short and
+conversational instead of producing long written-style answers.
 
-LiveKit provides the real-time communication layer between the browser and the voice agent.
+4.2 Real-Time Voice Communication
 
-🎙️ Multilingual Speech Recognition
+LiveKit provides the real-time WebRTC communication layer.
 
-Deepgram Nova-3 is used for speech-to-text with multilingual recognition.
+The browser connects to a LiveKit room and publishes microphone audio.
+The agent joins the same room and processes the conversation in real
+time.
 
-🔊 Consistent Voice
+This avoids building a custom audio transport layer.
 
-Rime TTS generates the agent's spoken responses with an Indian voice.
+4.3 Speech-to-Text
 
-🧠 Conversational LLM
+Deepgram Nova-3 handles speech recognition.
 
-The language model generates short, conversational responses optimized for voice interaction.
+Current configuration:
 
-✋ Interruption Handling
+deepgram.STT(
+    model="nova-3",
+    language="hi",
+    interim_results=True,
+    smart_format=True,
+    endpointing_ms=100,
+    keyterm=[
+        # product / technical terms
+    ],
+)
 
-Users can interrupt the agent naturally while it is speaking.
+The configuration is intended to support Hindi speech while preserving
+important English product and technical vocabulary.
 
-📊 Evaluation & Telemetry
+4.4 Conversational LLM
 
-The frontend includes workflow and evaluation views for observing conversation behavior and system performance.
+Friday uses the Groq OpenAI-compatible API with:
 
-🏗️ Architecture
+openai.LLM(
+    model="openai/gpt-oss-20b",
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1",
+    temperature=0.2,
+    max_completion_tokens=60,
+    top_p=0.9,
+    reasoning_effort="low",
+)
 
-                    ┌──────────────────┐
-                    │      User        │
-                    │   Microphone     │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │     Frontend     │
-                    │ React + Vite     │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │     LiveKit      │
-                    │ Realtime Audio   │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │  Python Agent    │
-                    │ LiveKit Agents   │
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-              ▼              ▼              ▼
-        ┌──────────┐   ┌──────────┐   ┌──────────┐
-        │ Deepgram │   │   LLM    │   │   Rime   │
-        │   STT    │   │   Groq   │   │   TTS    │
-        └──────────┘   └──────────┘   └──────────┘
-              │              │              │
-              └──────────────┼──────────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Spoken Response  │
-                    └──────────────────┘
+The short completion limit helps keep spoken responses concise.
 
-🛠️ Tech Stack
+4.5 Consistent Voice
 
-Frontend
+Rime Coda generates the spoken response.
 
-React
+Current configuration:
 
-TypeScript
+rime.TTS(
+    model="coda",
+    speaker="luna",
+    lang="eng",
+    sample_rate=22050,
+    use_websocket=True,
+    segment="bySentence",
+    speed_alpha=0.95,
+)
 
-Vite
+Rime Configuration
 
-LiveKit Client
+Setting        Value
 
-Lucide React
+Model          coda
+Speaker        luna
+Language       eng
+Sample Rate    22050 Hz
+Transport      WebSocket
+Segmentation   bySentence
+Speed          0.95
+Audio          PCM
 
-Backend
+The application uses an Indian customer-support persona. The selected
+luna voice is the fixed Rime voice profile used by the implementation;
+this should not be interpreted as a guarantee of a specific Indian
+accent.
 
-Node.js
+5. Turn-Taking & Interruption
 
-Express
+Voice conversations need more than speech recognition and text
+generation.
 
-LiveKit Server SDK
+Friday uses interruption handling so that the assistant can stop
+speaking when the user starts talking.
 
-Voice Agent
+Current Interruption Configuration
 
-Python
+interruption={
+    "enabled": True,
+    "mode": "vad",
+    "min_duration": 0.35,
+    "min_words": 2,
+    "false_interruption_timeout": 1.5,
+    "resume_false_interruption": True,
+}
 
-LiveKit Agents
+Endpointing
 
-Deepgram Nova-3
+endpointing={
+    "mode": "fixed",
+    "min_delay": 0.0,
+    "max_delay": 0.6,
+}
 
-Rime TTS
+This is intended to balance:
 
-Groq / OpenAI-compatible LLM endpoint
+Fast response time
 
-Silero VAD
+Avoiding premature turn completion
 
-📁 Project Structure
+Natural user interruptions
+
+False-interruption recovery
+
+6. Latency-Oriented Design
+
+Friday is built as a streaming pipeline rather than waiting for every
+stage to finish before starting the next.
+
+sequenceDiagram
+    participant U as User
+    participant LK as LiveKit
+    participant STT as Deepgram
+    participant LLM as Groq
+    participant TTS as Rime
+
+    U->>LK: Speak
+    LK->>STT: Audio stream
+    STT-->>LLM: Transcript
+    LLM-->>TTS: Response text
+    TTS-->>LK: Audio stream
+    LK-->>U: Spoken response
+
+Important latency-oriented choices include:
+
+LiveKit realtime audio transport
+
+Deepgram interim transcription
+
+Short LLM responses
+
+Rime WebSocket streaming
+
+Sentence-based TTS segmentation
+
+VAD-based interruption handling
+
+Disabled preemptive generation to avoid unnecessary speculative LLM
+calls
+
+7. Technology Stack
+
+Layer         Technology                Purpose
+
+Frontend      React + TypeScript        Voice UI
+Build Tool    Vite                      Frontend development/build
+Realtime      LiveKit                   WebRTC audio transport
+STT           Deepgram Nova-3           Speech recognition
+LLM           Groq GPT-OSS 20B          Response generation
+TTS           Rime Coda                 Speech synthesis
+Backend       Node.js + Express         LiveKit token server
+Agent         Python + LiveKit Agents   Voice orchestration
+Environment   .env                    Secret configuration
+
+8. Project Structure
 
 friday/
 │
 ├── frontend/
 │   └── friday-voice/
-│       ├── src/
 │       ├── public/
+│       ├── src/
+│       │   ├── components/
+│       │   ├── services/
+│       │   │   └── livekitClient.ts
+│       │   ├── App.tsx
+│       │   └── ...
 │       ├── package.json
-│       └── ...
+│       └── vite.config.*
 │
 ├── backend/
 │   ├── agent.py
 │   ├── server.js
 │   ├── package.json
 │   ├── requirements.txt
-│   └── ...
+│   ├── .env
+│   └── .env.example
 │
-├── .gitignore
-└── README.md
+├── README.md
+├── RIME_EVIDENCE.md
+└── .gitignore
 
-⚙️ Setup
+9. Backend Architecture
 
-1. Clone the Repository
+The backend has two separate responsibilities.
 
-git clone https://github.com/Abhishek-ias/friday-multi-voiceagent.git
-cd friday-multi-voiceagent
+Node.js Server
 
-2. Backend Setup
+server.js is responsible for generating temporary LiveKit access
+tokens.
 
-cd backend
-npm install
+Frontend
+   │
+   │ GET /api/livekit/token
+   ▼
+Express Server
+   │
+   │ creates JWT
+   ▼
+LiveKit Token
+   │
+   ▼
+Frontend connects to LiveKit
+
+The LiveKit API key and secret remain on the backend and are never
+placed in the frontend.
+
+Python Agent
+
+agent.py is the actual voice agent.
+
+It connects to LiveKit and coordinates:
+
+LiveKit
+   ↓
+Deepgram STT
+   ↓
+Groq LLM
+   ↓
+Rime TTS
+   ↓
+LiveKit
+
+10. Frontend ↔ Backend Integration
+
+The frontend does not contain LiveKit server credentials.
+
+Instead:
+
+React Frontend
+      │
+      │ HTTP request
+      ▼
+Node.js Backend
+      │
+      │ generates token
+      ▼
+LiveKit JWT
+      │
+      ▼
+React Frontend
+      │
+      │ connects with token
+      ▼
+LiveKit Room
+
+The frontend service is:
+
+frontend/friday-voice/src/services/livekitClient.ts
+
+It requests:
+
+GET /api/livekit/token
+
+and uses the returned:
+
+token
+url
+room
+
+to connect to LiveKit.
+
+11. Environment Variables
 
 Create:
 
 backend/.env
 
-Add your local credentials:
+Example:
 
 LIVEKIT_URL=your_livekit_url
 LIVEKIT_API_KEY=your_livekit_api_key
 LIVEKIT_API_SECRET=your_livekit_api_secret
 
 DEEPGRAM_API_KEY=your_deepgram_api_key
+GROQ_API_KEY=your_groq_api_key
 RIME_API_KEY=your_rime_api_key
 
-GROQ_API_KEY=your_groq_api_key
-OPENAI_API_KEY=your_openai_api_key
-GEMINI_API_KEY=your_gemini_api_key
+Important
 
-Important: Never commit .env files or real API keys to GitHub.
+Never commit real credentials.
 
-3. Start the Backend Server
+The repository should contain:
 
-npm run dev
+.env.example
 
-The backend server runs on:
+with placeholder values only.
 
-http://localhost:5000
+12. Installation
 
-4. Start the Voice Agent
-
-Open another terminal:
+Backend
 
 cd backend
+npm install
 
-Activate the Python virtual environment:
+Create the Python environment using Python 3.12:
 
-Windows:
+py -3.12 -m venv .venv
+
+Activate it:
 
 .\.venv\Scripts\activate
 
-Start the agent:
+Install Python dependencies:
 
-python agent.py dev
+pip install -r requirements.txt
 
-5. Start the Frontend
-
-Open another terminal:
+Frontend
 
 cd frontend/friday-voice
 npm install
+
+13. Running the Project
+
+Friday currently runs as three processes.
+
+Terminal 1 --- Node.js Token Server
+
+cd C:\Users\sukan\friday\backend
+npm run dev
+
+Expected:
+
+Server running on http://localhost:5000
+
+Terminal 2 --- Python Voice Agent
+
+cd C:\Users\sukan\friday\backend
+.\.venv\Scripts\activate
+python agent.py dev
+
+Terminal 3 --- React Frontend
+
+cd C:\Users\sukan\friday\frontend\friday-voice
 npm run dev
 
 Open the Vite URL shown in the terminal.
 
-🎤 Example Conversation
+14. LiveKit Connection
 
-User
+The frontend creates a room name and requests a token from the backend.
 
-"Mera order kab tak aayega?"
+Conceptually:
 
-Friday
+Browser
+   │
+   ├── Request token ──────────► Node.js
+   │                              │
+   │                              └── Sign LiveKit JWT
+   │
+   ◄── token + LiveKit URL ──────┘
+   │
+   └── Connect to LiveKit
 
-"Sure, main aapka order status check karta hoon."
+The backend signs the token because the LiveKit API secret must remain
+private.
 
-User
+15. Failure Handling
 
-"Actually mujhe refund chahiye because product damaged tha."
+The application should fail gracefully when an external service is
+unavailable.
 
-Friday
+LiveKit
 
-"Sure, main refund process ke liye help karta hoon."
+If a connection fails:
 
-The important part is that the user does not need to manually switch between Hindi and English.
+Connection error
+      ↓
+Frontend reports failure
+      ↓
+User can retry
 
-⚡ Latency Optimization
+Speech Recognition
 
-Friday uses several techniques to improve conversational responsiveness:
+If STT fails:
 
-Streaming speech recognition
+No transcript
+      ↓
+No LLM request
+      ↓
+Conversation remains available for retry
 
-Voice activity detection
+LLM
 
-Early endpoint detection
+If the Groq API returns an error such as a rate-limit/usage-limit
+response:
 
-Preemptive response generation
+Groq error
+      ↓
+No valid response
+      ↓
+Agent session may stop/retry depending on LiveKit behavior
 
-Streaming TTS
+A quota error cannot be fixed by restarting the frontend; the relevant
+API quota must become available again.
 
-Short LLM responses
+TTS
 
-LiveKit real-time audio transport
+If Rime fails:
 
-Interruption detection
+Generated text
+      ↓
+TTS error
+      ↓
+No playable voice response
 
-The goal is to make the interaction feel like a conversation rather than a request-response API.
+16. Security
 
-🔐 Security
+Secrets are intentionally kept outside the frontend.
 
-API credentials are stored locally in .env files.
+Never expose
 
-The repository only contains .env.example files with placeholders.
+LIVEKIT_API_SECRET
+DEEPGRAM_API_KEY
+GROQ_API_KEY
+RIME_API_KEY
 
-Secrets should never be committed to Git.
+Safe pattern
 
-🚀 Future Improvements
+Browser
+   │
+   │ temporary token
+   ▼
+Backend
+   │
+   ├── LiveKit secret
+   ├── Deepgram key
+   ├── Groq key
+   └── Rime key
 
-Better Hindi-English language-switch detection
+Only the backend/agent environment should have access to these
+credentials.
 
-More robust interruption recovery
+17. Known Limitations
 
-Conversation memory
+Current limitations include:
 
-Customer/order API integration
+The agent depends on external STT, LLM, and TTS services.
+
+Groq usage/rate limits can prevent response generation.
+
+The current STT configuration is Hindi-oriented and may require
+further tuning for different accents and languages.
+
+Voice quality and accent characteristics depend on the selected Rime
+voice.
+
+The project currently runs locally rather than as a production
+deployment.
+
+LiveKit token generation is currently handled by a lightweight
+Express server.
+
+The system is optimized for short support responses rather than
+long-form conversations.
+
+18. Demo Conversation
+
+User:
+"Mera order abhi tak nahi aaya."
+
+Friday:
+"Sure, main order status check karta hoon."
+
+User:
+"Actually payment bhi deduct ho gaya."
+
+Friday:
+"Samajh gaya. Payment issue bhi check karte hain."
+
+User:
+"Wait, order number 4582 hai."
+
+Friday:
+"Got it, order 4582 note kar liya."
+
+The goal is not simply to translate Hindi into English.
+
+The goal is to maintain a natural bilingual conversation.
+
+19. Evaluation Goals
+
+The project can be evaluated across:
+
+Metric                  Goal
+
+STT accuracy            Correct Hindi-English transcription
+Code-switch handling    Preserve mixed-language meaning
+Response latency        Fast conversational response
+TTS latency             Begin speaking quickly
+Interruption recovery   Stop/resume naturally
+Voice consistency       Stable agent identity
+Response length         Short, voice-friendly replies
+Conversation quality    Natural customer-support interaction
+
+20. Roadmap
+
+Current
+
+React voice interface
+
+LiveKit integration
+
+Backend token generation
+
+Deepgram STT
+
+Groq LLM
+
+Rime TTS
+
+Hindi-English conversational prompt
+
+VAD interruption handling
+
+Realtime audio pipeline
+
+Next
 
 Production deployment
 
-Additional Indian languages
+Persistent conversation/session storage
 
-Advanced latency monitoring
+Better multilingual language detection
 
-Voice quality optimization
+Customer-support tool integrations
 
-👥 Team
+Latency benchmarking
 
-Built as a hackathon project focused on real-time multilingual voice interaction for Indian users.
+Automated evaluation
 
-📜 License
+More voice profiles
 
-This project is intended for hackathon and educational use.
+Robust fallback handling
+
+Detailed observability and telemetry
+
+21. Documentation & Evidence
+
+Additional implementation evidence:
+
+RIME_EVIDENCE.md --- Rime integration details and configuration
+evidence.
+
+Official service documentation:
+
+LiveKit
+
+LiveKit Agents
+
+Deepgram
+
+Groq
+
+Rime
+
+22. License
+
+This project is intended as a hackathon/project prototype.
+
+Friday Voice
+
+Speak naturally. Switch languages freely. Get help instantly.
