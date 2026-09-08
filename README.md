@@ -1,6 +1,6 @@
 Friday Voice
 
-Real-time Multilingual Voice AI Customer Support Agent
+Real-time Multilingual Voice AI Customer Support Agent.
 
 Natural Hindi-English conversations • Real-time audio • Interruptible
 voice interaction
